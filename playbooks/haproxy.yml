@@ -1,0 +1,6 @@
+- name: Install packages
+  hosts: haproxy
+  become: true
+  gather_facts: true
+  roles:
+    - haproxy
