@@ -1,0 +1,21 @@
+
+- name: Install HAProxy
+  ansible.builtin.apt:
+    name: haproxy
+    state: present
+    update_cache: true
+- name: Set hostname using hostname module
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+- name: Configure HAProxy
+  ansible.builtin.template:
+    src: templates/haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    validate: /usr/sbin/haproxy -f %s -c
+    mode: "0600"
+  notify: Restart haproxy
+- name: Start and enable HAProxy service
+  ansible.builtin.service:
+    name: haproxy
+    state: started
+    enabled: true
