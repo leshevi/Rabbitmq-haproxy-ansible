@@ -1,0 +1,7 @@
+- name: Install packages
+  hosts: rabbitmq
+  become: true
+  gather_facts: true
+  roles:
+    - rabbitmq
+    
