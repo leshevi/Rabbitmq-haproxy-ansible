@@ -1,0 +1,139 @@
+- name: Print the gateway for each host when defined
+  ansible.builtin.debug:
+    var: ansible_facts
+
+- name: Ensure Java is installed
+  ansible.builtin.apt:
+    name:
+      - curl
+      - gnupg
+      - apt-transport-https
+      - logrotate
+      - init-system-helpers
+      - adduser
+      - erlang
+      - rabbitmq-server
+      - ufw
+    state: present
+    update_cache: true
+
+- name: Set hostname using hostname module
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Add alle hosts and ip to /etc/hosts
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: '{{ hostvars[item].ansible_default_ipv4.address }}.*{{ item }}$'
+    line: "{{ hostvars[item].ansible_default_ipv4.address }} {{ hostvars[item]['inventory_hostname'] }}"
+    state: present
+  become: true
+  with_items: "{{ groups.rabbitmq }}"
+
+- name: Enable ports in firewall
+  community.general.ufw:
+    port: "{{ item }}"
+    rule: allow
+    state: enabled
+    proto: tcp
+  loop: [22, 8080, 4369, 25672, 5672, 15672]
+  become: true
+
+- name: Enable the firewall
+  community.general.ufw:
+    state: enabled
+
+- name: Ensure RabbitMQ directory exists
+  ansible.builtin.file:
+    path: /var/lib/rabbitmq
+    state: directory
+    owner: rabbitmq
+    group: rabbitmq
+    mode: '0755'
+
+- name: Deploy Erlang cookie
+  ansible.builtin.template:
+    src: templates/erlang.cookie.j2
+    dest: /var/lib/rabbitmq/.erlang.cookie
+    owner: rabbitmq
+    group: rabbitmq
+    mode: '0600'
+
+- name: Start and enable RabbitMQ service
+  ansible.builtin.service:
+    name: rabbitmq-server
+    state: started
+    enabled: true
+
+- name: Enable management plugin
+  ansible.builtin.command: rabbitmq-plugins enable rabbitmq_management
+  register: my_output
+  changed_when: my_output.rc != 0
+
+- name: Restart service rabbitmq-server, in all cases
+  ansible.builtin.service:
+    name: rabbitmq-server
+    state: restarted
+
+- name: Join RabbitMQ cluster (secondary nodes)
+  when: inventory_hostname != rabbitmq_cluster_primary
+  block:
+    - name: Stop RabbitMQ application
+      ansible.builtin.command: rabbitmqctl stop_app
+      register: stop_app
+      changed_when: "'already_stopped' not in stop_app.stdout"
+
+    - name: Join cluster
+      ansible.builtin.command: rabbitmqctl join_cluster rabbit@{{ rabbitmq_cluster_primary }}
+      register: join_cluster
+      changed_when: "'already_clustered' not in join_cluster.stdout"
+
+    - name: Start RabbitMQ application
+      ansible.builtin.command: rabbitmqctl start_app
+      register: my_output
+      changed_when: my_output.rc != 0
+
+- name: Set HA policy
+  ansible.builtin.command: rabbitmqctl set_policy ha-all ".*" '{"ha-mode":"all"}'
+  become: true
+  register: my_output
+  changed_when: my_output.rc != 0
+
+- name: User new
+  when: inventory_hostname == rabbitmq_cluster
+  block:
+    - name: Installation rabbitmq-plugins
+      ansible.builtin.command: rabbitmq-plugins enable rabbitmq_management
+      register: plugins
+      changed_when: "'Plugin configuration unchanged' not in plugins.stdout"
+
+    - name: Examination user
+      ansible.builtin.command: rabbitmqctl list_users
+      register: list_user
+      changed_when: false
+
+    - name: Add user to rabbitmqctl
+      when: list_user.stdout != rabbitmq_user
+      block:
+        - name: Appoint user
+          ansible.builtin.shell: su - $ANSIBLE_USER -c "rabbitmqctl add_user {{ rabbitmq_user }} "{{ rabbitmq_passwd }}""
+          args:
+            executable: /bin/bash
+          register: rabb_user
+          when: list_user.stdout != rabbitmq_user
+          changed_when: false
+
+        - name: Show result content only
+          ansible.builtin.debug:
+            msg: "{{ rabb_user.stdout }}"
+
+        - name: Appoint user administrator
+          ansible.builtin.shell: su - $ANSIBLE_USER -c "rabbitmqctl set_user_tags {{ rabbitmq_user }} administrator"
+          args:
+            executable: /bin/bash
+          register: admin_rabb_user
+          changed_when: false
+
+        - name: Show result content only
+          ansible.builtin.debug:
+            msg: "{{ admin_rabb_user.stdout }}"
