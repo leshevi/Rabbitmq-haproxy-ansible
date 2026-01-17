@@ -1,0 +1,6 @@
+rabbitmq_erlang_cookie: "SECRET_ERLANG_COOKIE"
+rabbitmq_user: rabbi
+rabbitmq_passwd: "PasswdRabbitmq#"
+rabbitmq_cluster_primary: "rabbitmq1"
+rabbitmq_cluster: "rabbitmq1"
+
