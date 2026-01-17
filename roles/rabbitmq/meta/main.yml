@@ -1,0 +1,16 @@
+# meta/main.yml
+---
+galaxy_info:
+  role_name: rabbitmq
+  author: leshevi
+  description: A role for installing rabbitmq
+  license: license (GPLv3, MIT, etc)
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+  galaxy_tags:
+    - rabbitmq
+dependencies: []
+
