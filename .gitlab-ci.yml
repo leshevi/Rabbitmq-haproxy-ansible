@@ -48,11 +48,11 @@ variables:
         },
         rabbitmq: {
           hosts: .hosts | map(select(.name | test("^rabbitmq")))
-            | map({(.name): {ansible_host: .ip, ansible_ssh_user: "ansible"}}) | add
+            | map({(.name): {ansible_host: .ip, ansible_ssh_user: .user}}) | add
         },
         haproxy: {
           hosts: .hosts | map(select(.name == "haproxy")) 
-            | map({"haproxy1": {ansible_host: .ip, ansible_ssh_user: "ansible"}}) | add
+            | map({"haproxy1": {ansible_host: .ip, ansible_ssh_user: .user}}) | add
         }
       }' $SERVERS  | yq eval -P - > hosts.yml
   artifacts:
