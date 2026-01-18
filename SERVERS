@@ -1,0 +1,11 @@
+{
+  "hosts": [
+    {"name": "rabbitmq1", "ip": "45.132.50.207", "user": "ansible"},
+    {"name": "rabbitmq2", "ip": "83.222.8.176", "user": "ansible"},
+    {"name": "haproxy1", "ip": "91.210.169.10", "user": "ansible"}
+    ],
+  "groups": [
+    {"name": "haproxy", "hosts": ["haproxy"]},
+    {"name": "rabbitmq", "hosts": ["rabbitmq1", "rabbitmq2"]}
+    ]
+}
