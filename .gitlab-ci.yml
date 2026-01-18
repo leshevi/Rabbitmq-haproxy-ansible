@@ -42,6 +42,10 @@ variables:
     - |
       jq '
       {
+        all: {
+          hosts: .hosts | map(select(.name))
+            | map({(.name): {ansible_host: .ip, ansible_ssh_user: .user}}) | add
+        },
         rabbitmq: {
           hosts: .hosts | map(select(.name | test("^rabbitmq")))
             | map({(.name): {ansible_host: .ip, ansible_ssh_user: "ansible"}}) | add
