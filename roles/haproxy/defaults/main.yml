@@ -1,0 +1,5 @@
+haproxy_nodes:
+  - name: rabbitmq1
+    ip: "{{ hostvars['rabbitmq1']['ansible_default_ipv4']['address'] }}"
+  - name: rabbitmq2
+    ip: "{{ hostvars['rabbitmq2']['ansible_default_ipv4']['address'] }}"
